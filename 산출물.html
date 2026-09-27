@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>암호 분석</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    background:#0b0f14;
+    color:#e8edf3;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+header{
+    height:70px;
+    border-bottom:1px solid #202832;
+    display:flex;
+    align-items:center;
+    padding:0 30px;
+    background:#0d1218;
+}
+
+.tabs{
+    display:flex;
+    gap:8px;
+}
+
+.tab{
+    padding:10px 18px;
+    border-radius:8px;
+    color:#8995a3;
+    cursor:pointer;
+    user-select:none;
+}
+
+.tab.active{
+    background:#1a222c;
+    color:white;
+}
+
+main{
+    max-width:1200px;
+    margin:auto;
+    padding:30px;
+}
+
+.page{
+    display:none;
+}
+
+.page.active{
+    display:block;
+}
+
+h1{
+    margin-top:0;
+    font-size:30px;
+}
+
+.subtitle{
+    color:#8995a3;
+    margin-bottom:25px;
+}
+
+.panel{
+    background:#10161d;
+    border:1px solid #222c36;
+    border-radius:14px;
+    padding:22px;
+    margin-bottom:22px;
+}
+
+label{
+    display:block;
+    margin-bottom:9px;
+    color:#aeb8c4;
+    font-size:14px;
+}
+
+textarea,
+input{
+    width:100%;
+    background:#0a0e13;
+    border:1px solid #29333e;
+    border-radius:9px;
+    color:#fff;
+    padding:13px;
+    font-size:15px;
+    outline:none;
+}
+
+textarea{
+    min-height:130px;
+    resize:vertical;
+    font-family:Consolas, monospace;
+}
+
+textarea:focus,
+input:focus{
+    border-color:#536170;
+}
+
+.controls{
+    display:flex;
+    gap:12px;
+    margin-top:15px;
+    flex-wrap:wrap;
+}
+
+.control{
+    min-width:150px;
+}
+
+button{
+    border:0;
+    border-radius:9px;
+    padding:11px 18px;
+    background:#e8edf3;
+    color:#0b0f14;
+    font-weight:700;
+    cursor:pointer;
+}
+
+button:hover{
+    opacity:.88;
+}
+
+button.secondary{
+    background:#202a35;
+    color:#e8edf3;
+}
+
+.results{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:15px;
+    margin-top:22px;
+}
+
+.card{
+    background:#0c1117;
+    border:1px solid #232d38;
+    border-radius:12px;
+    padding:17px;
+    min-width:0;
+}
+
+.card-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+}
+
+.card-title{
+    font-weight:700;
+    font-size:16px;
+}
+
+.card-time{
+    color:#778493;
+    font-family:Consolas, monospace;
+    font-size:12px;
+}
+
+.result{
+    background:#080c10;
+    border:1px solid #1e2730;
+    border-radius:8px;
+    padding:12px;
+    min-height:55px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    font-family:Consolas, monospace;
+    color:#dce4ec;
+}
+
+.copy{
+    margin-top:10px;
+    padding:7px 12px;
+    font-size:12px;
+}
+
+.score{
+    margin-top:18px;
+    padding:15px;
+    border-radius:10px;
+    background:#151d26;
+    border:1px solid #283440;
+}
+
+.benchmark-input{
+    max-width:500px;
+}
+
+.benchmark-results{
+    margin-top:25px;
+}
+
+.benchmark-row{
+    display:grid;
+    grid-template-columns:150px 1fr 130px;
+    gap:10px;
+    align-items:center;
+    padding:12px 0;
+    border-bottom:1px solid #202832;
+}
+
+.benchmark-name{
+    font-weight:700;
+}
+
+.benchmark-value{
+    font-family:Consolas, monospace;
+    color:#b7c2ce;
+    word-break:break-word;
+}
+
+.benchmark-time{
+    text-align:right;
+    font-family:Consolas, monospace;
+    color:#8995a3;
+}
+
+.error{
+    color:#ff8585;
+}
+
+@media(max-width:800px){
+
+    .results{
+        grid-template-columns:1fr;
+    }
+
+    .benchmark-row{
+        grid-template-columns:1fr;
+        gap:5px;
+    }
+
+    .benchmark-time{
+        text-align:left;
+    }
+
+    header{
+        padding:0 15px;
+    }
+
+    main{
+        padding:20px 15px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+
+    <div class="tabs">
+
+        <div
+            class="tab active"
+            onclick="showPage('encryptPage', this)"
+        >
+            암호화
+        </div>
+
+        <div
+            class="tab"
+            onclick="showPage('decodePage', this)"
+        >
+            암호 해석
+        </div>
+
+        <div
+            class="tab"
+            onclick="showPage('experimentPage', this)"
+        >
+            실험
+        </div>
+
+    </div>
+
+</header>
+
+
+<main>
+
+<!-- =====================================================
+     암호화
+===================================================== -->
+
+<section id="encryptPage" class="page active">
+
+    <h1>암호화</h1>
+
+    <div class="subtitle">
+        입력한 문자열을 여러 암호 방식으로 변환합니다.
+    </div>
+
+    <div class="panel">
+
+        <label>입력값</label>
+
+        <textarea
+            id="encryptInput"
+            placeholder="예: HELLO WORLD"
+        >HELLO WORLD</textarea>
+
+        <div class="controls">
+
+            <div class="control">
+
+                <label>Caesar Shift</label>
+
+                <input
+                    id="shiftInput"
+                    type="number"
+                    value="3"
+                >
+
+            </div>
+
+        </div>
+
+        <div style="margin-top:15px;">
+
+            <button onclick="encryptAll()">
+                암호화
+            </button>
+
+        </div>
+
+    </div>
+
+    <div
+        id="encryptResults"
+        class="results"
+    ></div>
+
+</section>
+
+
+<!-- =====================================================
+     복호화
+===================================================== -->
+
+<section id="decodePage" class="page">
+
+    <h1>암호 해석</h1>
+
+    <div class="subtitle">
+        암호화된 데이터를 원래 문자열로 복호화합니다.
+    </div>
+
+    <div class="panel">
+
+        <label>암호문</label>
+
+        <textarea
+            id="decodeInput"
+            placeholder="암호문을 입력하세요"
+        ></textarea>
+
+        <div style="margin-top:15px;">
+
+            <button onclick="decodeAll()">
+                암호 해석
+            </button>
+
+        </div>
+
+    </div>
+
+    <div
+        id="decodeResults"
+        class="results"
+    ></div>
+
+</section>
+
+
+<!-- =====================================================
+     실험
+===================================================== -->
+
+<section id="experimentPage" class="page">
+
+    <h1>실험</h1>
+
+    <div class="subtitle">
+        각 암호화 알고리즘을 반복 실행하여 평균 처리 시간을 측정합니다.
+    </div>
+
+    <div class="panel">
+
+        <label>실험 입력값</label>
+
+        <input
+            id="benchmarkInput"
+            class="benchmark-input"
+            value="HELLO WORLD"
+        >
+
+        <div style="margin-top:15px;">
+
+            <button onclick="runBenchmark()">
+                실험 시작
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="panel benchmark-results">
+
+        <div id="benchmarkResults">
+            실험을 시작하면 결과가 표시됩니다.
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+
+<script>
+
+/* =====================================================
+   입력값 정리
+===================================================== */
+
+function cleanInput(text){
+
+    return String(text)
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\n+$/g, "")
+        .replace(/\s+$/g, "");
+
+}
+
+
+/* =====================================================
+   MORSE
+===================================================== */
+
+const TEXT_TO_MORSE = {
+
+    A: ".-",
+    B: "-...",
+    C: "-.-.",
+    D: "-..",
+    E: ".",
+    F: "..-.",
+    G: "--.",
+    H: "....",
+    I: "..",
+    J: ".---",
+    K: "-.-",
+    L: ".-..",
+    M: "--",
+    N: "-.",
+    O: "---",
+    P: ".--.",
+    Q: "--.-",
+    R: ".-.",
+    S: "...",
+    T: "-",
+    U: "..-",
+    V: "...-",
+    W: ".--",
+    X: "-..-",
+    Y: "-.--",
+    Z: "--..",
+
+    0: "-----",
+    1: ".----",
+    2: "..---",
+    3: "...--",
+    4: "....-",
+    5: ".....",
+    6: "-....",
+    7: "--...",
+    8: "---..",
+    9: "----."
+
+};
+
+
+const MORSE_TO_TEXT = {
+
+    ".-": "A",
+    "-...": "B",
+    "-.-.": "C",
+    "-..": "D",
+    ".": "E",
+    "..-.": "F",
+    "--.": "G",
+    "....": "H",
+    "..": "I",
+    ".---": "J",
+    "-.-": "K",
+    ".-..": "L",
+    "--": "M",
+    "-.": "N",
+    "---": "O",
+    ".--.": "P",
+    "--.-": "Q",
+    ".-.": "R",
+    "...": "S",
+    "-": "T",
+    "..-": "U",
+    "...-": "V",
+    ".--": "W",
+    "-..-": "X",
+    "-.--": "Y",
+    "--..": "Z",
+
+    "-----": "0",
+    ".----": "1",
+    "..---": "2",
+    "...--": "3",
+    "....-": "4",
+    ".....": "5",
+    "-....": "6",
+    "--...": "7",
+    "---..": "8",
+    "----.": "9"
+
+};
+
+
+/* =====================================================
+   MORSE 암호화
+===================================================== */
+
+function morseEncode(text){
+
+    text = cleanInput(text);
+
+    if(text === ""){
+        return "";
+    }
+
+    const result = [];
+
+    for(const char of text){
+
+        /*
+         * 모든 종류의 공백을 단어 구분으로 처리
+         */
+
+        if(/\s/.test(char)){
+
+            /*
+             * 연속 공백은 나중에 정리
+             */
+
+            result.push("/");
+
+            continue;
+        }
+
+        const upper =
+            char.toUpperCase();
+
+        if(
+            Object.prototype.hasOwnProperty.call(
+                TEXT_TO_MORSE,
+                upper
+            )
+        ){
+
+            result.push(
+                TEXT_TO_MORSE[upper]
+            );
+
+        }
+
+    }
+
+    /*
+     * 연속된 / 제거
+     */
+
+    return result
+        .join(" ")
+        .replace(/(?:\/\s*){2,}/g, "/");
+
+}
+
+
+/* =====================================================
+   MORSE 복호화
+===================================================== */
+
+function morseDecode(text){
+
+    text = String(text).trim();
+
+    if(text === ""){
+        return "";
+    }
+
+    const parts =
+        text.split(/\s+/);
+
+    const result = [];
+
+    for(const code of parts){
+
+        if(code === "/"){
+
+            result.push(" ");
+
+            continue;
+
+        }
+
+        if(
+            Object.prototype.hasOwnProperty.call(
+                MORSE_TO_TEXT,
+                code
+            )
+        ){
+
+            result.push(
+                MORSE_TO_TEXT[code]
+            );
+
+        }
+
+    }
+
+    return result.join("");
+
+}
+
+
+/* =====================================================
+   CAESAR
+===================================================== */
+
+function caesar(text, shift){
+
+    text = cleanInput(text);
+
+    shift =
+        Number(shift) || 0;
+
+    let result = "";
+
+    for(const char of text){
+
+        const code =
+            char.charCodeAt(0);
+
+        if(code >= 65 && code <= 90){
+
+            result += String.fromCharCode(
+
+                (
+                    (
+                        code - 65 + shift
+                    ) % 26 + 26
+                ) % 26 + 65
+
+            );
+
+        }
+
+        else if(code >= 97 && code <= 122){
+
+            result += String.fromCharCode(
+
+                (
+                    (
+                        code - 97 + shift
+                    ) % 26 + 26
+                ) % 26 + 97
+
+            );
+
+        }
+
+        else{
+
+            result += char;
+
+        }
+
+    }
+
+    return result;
+
+}
+
+
+/* =====================================================
+   ROT13
+===================================================== */
+
+function rot13(text){
+
+    return caesar(text, 13);
+
+}
+
+
+/* =====================================================
+   BASE64
+===================================================== */
+
+function base64Encode(text){
+
+    text = cleanInput(text);
+
+    const bytes =
+        new TextEncoder().encode(text);
+
+    let binary = "";
+
+    for(const byte of bytes){
+
+        binary +=
+            String.fromCharCode(byte);
+
+    }
+
+    return btoa(binary);
+
+}
+
+
+function base64Decode(text){
+
+    try{
+
+        const binary =
+            atob(String(text).trim());
+
+        const bytes =
+            Uint8Array.from(
+                binary,
+                char => char.charCodeAt(0)
+            );
+
+        return new TextDecoder().decode(bytes);
+
+    }
+
+    catch(error){
+
+        return "복호화 오류";
+
+    }
+
+}
+
+
+/* =====================================================
+   HEX
+===================================================== */
+
+function hexEncode(text){
+
+    text = cleanInput(text);
+
+    const bytes =
+        new TextEncoder().encode(text);
+
+    return Array.from(bytes)
+        .map(
+            byte =>
+                byte
+                    .toString(16)
+                    .padStart(2, "0")
+        )
+        .join(" ");
+
+}
+
+
+function hexDecode(text){
+
+    try{
+
+        const clean =
+            String(text)
+                .replace(/\s+/g, "");
+
+        if(
+            clean.length % 2 !== 0
+        ){
+
+            return "복호화 오류";
+
+        }
+
+        const bytes = [];
+
+        for(
+            let i = 0;
+            i < clean.length;
+            i += 2
+        ){
+
+            const value =
+                parseInt(
+                    clean.substring(i, i + 2),
+                    16
+                );
+
+            if(Number.isNaN(value)){
+
+                return "복호화 오류";
+
+            }
+
+            bytes.push(value);
+
+        }
+
+        return new TextDecoder().decode(
+            new Uint8Array(bytes)
+        );
+
+    }
+
+    catch(error){
+
+        return "복호화 오류";
+
+    }
+
+}
+
+
+/* =====================================================
+   BINARY
+===================================================== */
+
+function binaryEncode(text){
+
+    text = cleanInput(text);
+
+    const bytes =
+        new TextEncoder().encode(text);
+
+    return Array.from(bytes)
+        .map(
+            byte =>
+                byte
+                    .toString(2)
+                    .padStart(8, "0")
+        )
+        .join(" ");
+
+}
+
+
+function binaryDecode(text){
+
+    try{
+
+        const parts =
+            String(text)
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean);
+
+        const bytes = [];
+
+        for(const part of parts){
+
+            if(
+                !/^[01]{8}$/.test(part)
+            ){
+
+                return "복호화 오류";
+
+            }
+
+            bytes.push(
+                parseInt(part, 2)
+            );
+
+        }
+
+        return new TextDecoder().decode(
+            new Uint8Array(bytes)
+        );
+
+    }
+
+    catch(error){
+
+        return "복호화 오류";
+
+    }
+
+}
+
+
+/* =====================================================
+   URL
+===================================================== */
+
+function urlEncode(text){
+
+    text = cleanInput(text);
+
+    return encodeURIComponent(text);
+
+}
+
+
+function urlDecode(text){
+
+    try{
+
+        return decodeURIComponent(
+            String(text).trim()
+        );
+
+    }
+
+    catch(error){
+
+        return "복호화 오류";
+
+    }
+
+}
+
+
+/* =====================================================
+   정밀 시간 측정
+===================================================== */
+
+function measure(fn, requestedCount = 1){
+
+    /*
+     * 너무 빠른 연산은 1회 측정으로는
+     * 0.000000 sec가 나올 수 있기 때문에
+     * 충분한 횟수만큼 묶어서 측정한다.
+     */
+
+    let count =
+        Math.max(1, requestedCount);
+
+
+    /*
+     * 일반 결과값을 한 번 얻기 위한 변수
+     */
+
+    let result;
+
+
+    /*
+     * 실험 횟수가 1인 경우에도
+     * 최소 반복을 확보한다.
+     */
+
+    if(count === 1){
+
+        count = 1000;
+
+    }
+
+
+    const start =
+        performance.now();
+
+
+    for(let i = 0; i < count; i++){
+
+        result = fn();
+
+    }
+
+
+    const end =
+        performance.now();
+
+
+    const totalSeconds =
+        (end - start) / 1000;
+
+
+    const averageSeconds =
+        totalSeconds / count;
+
+
+    return {
+
+        result: result,
+
+        time: averageSeconds
+
+    };
+
+}
+
+
+/* =====================================================
+   시간 표시
+===================================================== */
+
+function formatTime(time){
+
+    /*
+     * 소수점 6자리까지 표시하되
+     * 실제 측정값을 그대로 사용한다.
+     */
+
+    if(time === 0){
+
+        return "0.000000 sec";
+
+    }
+
+    return (
+        time.toFixed(9)
+        + " sec"
+    );
+
+}
+
+
+/* =====================================================
+   카드
+===================================================== */
+
+function createCard(
+    name,
+    result,
+    time
+){
+
+    const card =
+        document.createElement("div");
+
+    card.className =
+        "card";
+
+
+    const header =
+        document.createElement("div");
+
+    header.className =
+        "card-header";
+
+
+    const title =
+        document.createElement("div");
+
+    title.className =
+        "card-title";
+
+    title.textContent =
+        name;
+
+
+    const timer =
+        document.createElement("div");
+
+    timer.className =
+        "card-time";
+
+    timer.textContent =
+        formatTime(time);
+
+
+    header.appendChild(title);
+    header.appendChild(timer);
+
+
+    const resultBox =
+        document.createElement("div");
+
+    resultBox.className =
+        "result";
+
+    resultBox.textContent =
+        String(result);
+
+
+    const copyButton =
+        document.createElement("button");
+
+    copyButton.className =
+        "copy secondary";
+
+    copyButton.textContent =
+        "복사";
+
+
+    copyButton.onclick =
+        async function(){
+
+            try{
+
+                await navigator
+                    .clipboard
+                    .writeText(
+                        String(result)
+                    );
+
+                copyButton.textContent =
+                    "복사됨";
+
+                setTimeout(
+                    () => {
+                        copyButton.textContent =
+                            "복사";
+                    },
+                    1000
+                );
+
+            }
+
+            catch(error){
+
+                copyButton.textContent =
+                    "복사 실패";
+
+            }
+
+        };
+
+
+    card.appendChild(header);
+    card.appendChild(resultBox);
+    card.appendChild(copyButton);
+
+
+    return card;
+
+}
+
+
+/* =====================================================
+   암호화
+===================================================== */
+
+function encryptAll(){
+
+    const text =
+        cleanInput(
+            document.getElementById(
+                "encryptInput"
+            ).value
+        );
+
+
+    const shift =
+        document.getElementById(
+            "shiftInput"
+        ).value;
+
+
+    const box =
+        document.getElementById(
+            "encryptResults"
+        );
+
+
+    box.innerHTML = "";
+
+
+    const methods = [
+
+        {
+            name:"Caesar",
+
+            fn:() =>
+                caesar(
+                    text,
+                    shift
+                )
+        },
+
+        {
+            name:"ROT13",
+
+            fn:() =>
+                rot13(text)
+        },
+
+        {
+            name:"Base64",
+
+            fn:() =>
+                base64Encode(text)
+        },
+
+        {
+            name:"Hex",
+
+            fn:() =>
+                hexEncode(text)
+        },
+
+        {
+            name:"Binary",
+
+            fn:() =>
+                binaryEncode(text)
+        },
+
+        {
+            name:"Morse",
+
+            fn:() =>
+                morseEncode(text)
+        },
+
+        {
+            name:"URL Encoding",
+
+            fn:() =>
+                urlEncode(text)
+        }
+
+    ];
+
+
+    for(const method of methods){
+
+        try{
+
+            const measured =
+                measure(
+                    method.fn,
+                    1000
+                );
+
+
+            box.appendChild(
+
+                createCard(
+                    method.name,
+                    measured.result,
+                    measured.time
+                )
+
+            );
+
+        }
+
+        catch(error){
+
+            box.appendChild(
+
+                createCard(
+                    method.name,
+                    "처리 오류",
+                    0
+                )
+
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   복호화
+===================================================== */
+
+function decodeAll(){
+
+    const text =
+        document.getElementById(
+            "decodeInput"
+        ).value;
+
+
+    const box =
+        document.getElementById(
+            "decodeResults"
+        );
+
+
+    box.innerHTML = "";
+
+
+    const methods = [
+
+        {
+            name:"Caesar",
+
+            fn:() =>
+                caesar(
+                    text,
+                    -3
+                )
+        },
+
+        {
+            name:"ROT13",
+
+            fn:() =>
+                rot13(text)
+        },
+
+        {
+            name:"Base64",
+
+            fn:() =>
+                base64Decode(text)
+        },
+
+        {
+            name:"Hex",
+
+            fn:() =>
+                hexDecode(text)
+        },
+
+        {
+            name:"Binary",
+
+            fn:() =>
+                binaryDecode(text)
+        },
+
+        {
+            name:"Morse",
+
+            fn:() =>
+                morseDecode(text)
+        },
+
+        {
+            name:"URL Encoding",
+
+            fn:() =>
+                urlDecode(text)
+        }
+
+    ];
+
+
+    for(const method of methods){
+
+        try{
+
+            const measured =
+                measure(
+                    method.fn,
+                    1000
+                );
+
+
+            box.appendChild(
+
+                createCard(
+                    method.name,
+                    measured.result,
+                    measured.time
+                )
+
+            );
+
+        }
+
+        catch(error){
+
+            box.appendChild(
+
+                createCard(
+                    method.name,
+                    "처리 오류",
+                    0
+                )
+
+            );
+
+        }
+
+    }
+
+
+    const score =
+        document.createElement("div");
+
+
+    score.className =
+        "score";
+
+
+    score.textContent =
+        "각 암호 방식의 결과를 비교하여 원문과 일치하는 결과를 확인할 수 있습니다.";
+
+
+    box.appendChild(score);
+
+}
+
+
+/* =====================================================
+   실험
+===================================================== */
+
+function runBenchmark(){
+
+    const text =
+        cleanInput(
+            document.getElementById(
+                "benchmarkInput"
+            ).value
+        );
+
+
+    const box =
+        document.getElementById(
+            "benchmarkResults"
+        );
+
+
+    box.innerHTML = "";
+
+
+    const count =
+        1000;
+
+
+    const methods = [
+
+        {
+            name:"Caesar",
+
+            fn:() =>
+                caesar(
+                    text,
+                    3
+                )
+        },
+
+        {
+            name:"ROT13",
+
+            fn:() =>
+                rot13(text)
+        },
+
+        {
+            name:"Base64",
+
+            fn:() =>
+                base64Encode(text)
+        },
+
+        {
+            name:"Hex",
+
+            fn:() =>
+                hexEncode(text)
+        },
+
+        {
+            name:"Binary",
+
+            fn:() =>
+                binaryEncode(text)
+        },
+
+        {
+            name:"Morse",
+
+            fn:() =>
+                morseEncode(text)
+        },
+
+        {
+            name:"URL Encoding",
+
+            fn:() =>
+                urlEncode(text)
+        }
+
+    ];
+
+
+    const info =
+        document.createElement("div");
+
+
+    info.style.marginBottom =
+        "15px";
+
+
+    info.style.color =
+        "#8995a3";
+
+
+    info.textContent =
+        "입력값: " +
+        text +
+        " / 반복 횟수: " +
+        count.toLocaleString() +
+        "회";
+
+
+    box.appendChild(info);
+
+
+    let total = 0;
+
+
+    for(const method of methods){
+
+        try{
+
+            const measured =
+                measure(
+                    method.fn,
+                    count
+                );
+
+
+            total +=
+                measured.time;
+
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+
+            row.className =
+                "benchmark-row";
+
+
+            const name =
+                document.createElement(
+                    "div"
+                );
+
+
+            name.className =
+                "benchmark-name";
+
+
+            name.textContent =
+                method.name;
+
+
+            const value =
+                document.createElement(
+                    "div"
+                );
+
+
+            value.className =
+                "benchmark-value";
+
+
+            value.textContent =
+                String(
+                    measured.result
+                );
+
+
+            const time =
+                document.createElement(
+                    "div"
+                );
+
+
+            time.className =
+                "benchmark-time";
+
+
+            time.textContent =
+                formatTime(
+                    measured.time
+                );
+
+
+            row.appendChild(name);
+            row.appendChild(value);
+            row.appendChild(time);
+
+
+            box.appendChild(row);
+
+        }
+
+        catch(error){
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+
+            row.className =
+                "benchmark-row";
+
+
+            const name =
+                document.createElement(
+                    "div"
+                );
+
+
+            name.className =
+                "benchmark-name";
+
+
+            name.textContent =
+                method.name;
+
+
+            const value =
+                document.createElement(
+                    "div"
+                );
+
+
+            value.className =
+                "benchmark-value error";
+
+
+            value.textContent =
+                "처리 오류";
+
+
+            const time =
+                document.createElement(
+                    "div"
+                );
+
+
+            time.className =
+                "benchmark-time";
+
+
+            time.textContent =
+                "측정 실패";
+
+
+            row.appendChild(name);
+            row.appendChild(value);
+            row.appendChild(time);
+
+
+            box.appendChild(row);
+
+        }
+
+    }
+
+
+    const average =
+        total / methods.length;
+
+
+    const averageBox =
+        document.createElement(
+            "div"
+        );
+
+
+    averageBox.style.marginTop =
+        "22px";
+
+
+    averageBox.style.padding =
+        "15px";
+
+
+    averageBox.style.border =
+        "1px solid #283440";
+
+
+    averageBox.style.borderRadius =
+        "10px";
+
+
+    averageBox.style.background =
+        "#151d26";
+
+
+    averageBox.innerHTML =
+        "<strong>전체 평균</strong><br>" +
+        "<span style='font-family:Consolas,monospace'>" +
+        formatTime(average) +
+        "</span>";
+
+
+    box.appendChild(
+        averageBox
+    );
+
+}
+
+
+/* =====================================================
+   페이지 전환
+===================================================== */
+
+function showPage(
+    pageId,
+    clickedTab
+){
+
+    document
+        .querySelectorAll(".page")
+        .forEach(page => {
+
+            page.classList.remove(
+                "active"
+            );
+
+        });
+
+
+    document
+        .getElementById(pageId)
+        .classList.add(
+            "active"
+        );
+
+
+    document
+        .querySelectorAll(".tab")
+        .forEach(tab => {
+
+            tab.classList.remove(
+                "active"
+            );
+
+        });
+
+
+    clickedTab.classList.add(
+        "active"
+    );
+
+}
+
+
+/* =====================================================
+   시작
+===================================================== */
+
+encryptAll();
+
+</script>
+
+</body>
+</html>
